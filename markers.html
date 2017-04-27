@@ -47,7 +47,7 @@
 // http://kbroman.org/github_tutorial/pages/init.html
 // stef.mvr@gmail.com
 
-      var map;
+      var real_map;
       var service;
       var infowindow1;
 
@@ -62,48 +62,21 @@
       function initMap() {
 
         var r = new Randomize();
-        r.loadData_();
 
-        console.log(r);
-        // min_lat = Min(array_lat);
-        // max_lat = Max(array_lat);
-        // min_long = Min(array_long);
-        // max_long = Max(array_long);
-        //
-        // sw = new google.maps.LatLng(min_lat, min_long);
-        // ne = new google.maps.LatLng(max_lat, max_long);
-
-        sw = new google.maps.LatLng(37.0902, -95.7129);
-        ne = new google.maps.LatLng(37.100, -95.7200);
-
-        var bounds = new google.maps.LatLngBounds(sw, ne);
-
-        console.log(bounds);
-
-        map = new google.maps.Map(document.getElementById('map'), {
+        real_map = new google.maps.Map(document.getElementById('map'), {
           zoom: 5,
           center: {lat: 5, lng: 10}
         });
 
-        map.fitBounds(bounds);
+        r.init(real_map);
 
-        console.log(map.getBounds());
-
-        r.init(map);
-
-        console.log(r);
+        r.loadData_();
 
         infowindow1 = new google.maps.InfoWindow(); // for radarSearch
 
-        service = new google.maps.places.PlacesService(map); // calling the radarsearch
+        service = new google.maps.places.PlacesService(real_map); // calling the radarsearch
 
-        map.addListener('idle', performSearch);
-
-        console.log(array_lat);
-        console.log(array_lat.length);
-        console.log(array_lat.sort(function(a,b) { return a - b;}))
-
-
+        real_map.addListener('idle', performSearch);
 
 
       } // END initMap
@@ -111,7 +84,7 @@
 
         function performSearch() {
             var request = {
-              bounds: map.getBounds(),
+              bounds: real_map.getBounds(),
               keyword: 'tourist attraction'
             };
             service.radarSearch(request, callback);
@@ -130,7 +103,7 @@
 
         function addMarker(place) {
           var marker = new google.maps.Marker({
-            map: map,
+            map: real_map,
             position: place.geometry.location,
 
           });
@@ -168,7 +141,7 @@
               }
 
               infowindow1.setContent(info);
-              infowindow1.open(map, marker);
+              infowindow1.open(real_map, marker);
 
 
             });
@@ -178,6 +151,7 @@
 
       function Randomize() {
         this.polys_ = [];
+        this.dataLoaded_ = false;
       }
 
 
@@ -198,21 +172,24 @@
         xmlhttpRequest.send(null);
       };
 
-      var countries;
+
 
       Randomize.prototype.loadDataComplete_ = function(data) {
         this.dataLoaded_ = true;
         this.countries_ = data;			// PuzzleDemo object has a “countries_” property (field) = data
-
-
         this.countries_.sort(function() {
           return Math.round(Math.random()) - 0.5;
         });
 
-        countries = this.countries_[0];
-        this.addCountry_(countries);
+        this.finalCountry_ = (this.countries_[0]);
+
+        this.addCountry_(this.finalCountry_);
+
+
+
 
       };
+
 
 
       Randomize.prototype.addCountry_ = function(country) {
@@ -231,7 +208,6 @@
         var poly = new google.maps.Polygon(options);
         this.polys_.push(poly);
         var vertices = poly.getPaths();
-        var country = vertices.getAt(0).getAt(1);
 
         for(i = 0; i < vertices.length; i++){
           for(j = 0; j < vertices.getAt(i).length; j ++){
@@ -239,6 +215,22 @@
             array_long.push(vertices.getAt(i).getAt(j).lng());
           }
         }
+
+        min_lat = Min(array_lat);
+        max_lat = Max(array_lat);
+        min_long = Min(array_long);
+        max_long = Max(array_long);
+
+        sw = new google.maps.LatLng(min_lat, min_long);
+        ne = new google.maps.LatLng(max_lat, max_long);
+
+
+        var bounds = new google.maps.LatLngBounds(sw, ne);
+
+
+        real_map.fitBounds(bounds);
+
+
       };
 
 
@@ -271,8 +263,6 @@
         }
         return min;
       }
-
-
 
 
     </script>
