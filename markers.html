@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Let's Explore! - Iceland</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+
+      // The following example creates complex markers to indicate POIs in
+      // Iceland.
+
+      //1) create the map
+      // 2) new Randomize
+      // 3)get coordinates function (inside of init(map))
+      // 4) infowindow
+      // 5) service
+      // service for radar search
+
+//       OR
+// ORDER INSIDE INITMAP
+// 1) Randomize r = new Randomize()
+// r.loadData_()
+// 2) get bounds using the data
+// 3) create map
+//    - map.fitBounds(latlngbounds object)
+// 4) r.init(map)
+// 5)infowindow
+// 6) service for radar search
+// create map, I mean var map = {stuff inside your map}
+
+// http://kbroman.org/github_tutorial/pages/init.html
+// stef.mvr@gmail.com
+
+      var map;
+      var service;
+      var infowindow1;
+
+      var array_lat = [];
+      var array_long = [];
+
+      var max_lat;
+      var max_long;
+      var min_lat;
+      var min_long;
+
+      function initMap() {
+
+        var r = new Randomize();
+        r.loadData_();
+
+        console.log(r);
+        // min_lat = Min(array_lat);
+        // max_lat = Max(array_lat);
+        // min_long = Min(array_long);
+        // max_long = Max(array_long);
+        //
+        // sw = new google.maps.LatLng(min_lat, min_long);
+        // ne = new google.maps.LatLng(max_lat, max_long);
+
+        sw = new google.maps.LatLng(37.0902, -95.7129);
+        ne = new google.maps.LatLng(37.100, -95.7200);
+
+        var bounds = new google.maps.LatLngBounds(sw, ne);
+
+        console.log(bounds);
+
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 5,
+          center: {lat: 5, lng: 10}
+        });
+
+        map.fitBounds(bounds);
+
+        console.log(map.getBounds());
+
+        r.init(map);
+
+        console.log(r);
+
+        infowindow1 = new google.maps.InfoWindow(); // for radarSearch
+
+        service = new google.maps.places.PlacesService(map); // calling the radarsearch
+
+        map.addListener('idle', performSearch);
+
+        console.log(array_lat);
+        console.log(array_lat.length);
+        console.log(array_lat.sort(function(a,b) { return a - b;}))
+
+
+
+
+      } // END initMap
+
+
+        function performSearch() {
+            var request = {
+              bounds: map.getBounds(),
+              keyword: 'tourist attraction'
+            };
+            service.radarSearch(request, callback);
+          }
+
+        function callback(results, status) {
+          if (status !== google.maps.places.PlacesServiceStatus.OK) {
+            console.error(status);
+            return;
+          }
+          for (var i = 0, result; result = results[i]; i++) {
+            addMarker(result);
+          }
+        }
+
+
+        function addMarker(place) {
+          var marker = new google.maps.Marker({
+            map: map,
+            position: place.geometry.location,
+
+          });
+
+
+          addPlaceListener(marker, place);
+        }
+
+
+        function addPlaceListener(marker, place) {
+          google.maps.event.addListener(marker, 'click', function() {
+            service.getDetails(place, function(result, status) {
+              if (status !== google.maps.places.PlacesServiceStatus.OK) {
+                console.error(status);
+                return;
+              }
+
+              if (!result.website){
+                var info = '<h1>' + result.name + '</h1>'
+              }
+              else{
+                info = '<h1>' + result.name + '</h1>' +  "Website: "  + result.website.link(result.website)
+              }
+              var detail_type = result.types
+              if(detail_type[0] != "point_of_interest") {
+                info += '<p>' + "Type of POI: " + detail_type[0] + '</p>'
+              }
+
+              if(result.international_phone_number){
+                info += '<p>' + "Phone Number: " + result.international_phone_number + '</p>'
+              }
+
+              if(result.formatted_address){
+                info += '<p>' + "Address: " + result.formatted_address + '</p>'
+              }
+
+              infowindow1.setContent(info);
+              infowindow1.open(map, marker);
+
+
+            });
+          });
+        }
+
+
+      function Randomize() {
+        this.polys_ = [];
+      }
+
+
+      Randomize.START_COLOR_ = '#3c79de';
+      Randomize.END_COLOR_ = '#037e29';
+
+      Randomize.prototype.init = function(map) {
+        this.map_ = map;
+      };
+
+      Randomize.prototype.loadData_ = function() {
+        var xmlhttpRequest = new XMLHttpRequest;
+        xmlhttpRequest.onreadystatechange = function() {
+          if (xmlhttpRequest.status != 200 || xmlhttpRequest.readyState != XMLHttpRequest.DONE) return;
+            this.loadDataComplete_(JSON.parse(xmlhttpRequest.responseText));
+          }.bind(this);
+        xmlhttpRequest.open('GET', 'https://storage.googleapis.com/mapsdevsite/json/puzzle.json',true);
+        xmlhttpRequest.send(null);
+      };
+
+      var countries;
+
+      Randomize.prototype.loadDataComplete_ = function(data) {
+        this.dataLoaded_ = true;
+        this.countries_ = data;			// PuzzleDemo object has a “countries_” property (field) = data
+
+
+        this.countries_.sort(function() {
+          return Math.round(Math.random()) - 0.5;
+        });
+
+        countries = this.countries_[0];
+        this.addCountry_(countries);
+
+      };
+
+
+      Randomize.prototype.addCountry_ = function(country) {
+        var options = {
+          strokeColor: Randomize.START_COLOR_,
+          strokeOpacity: 0.8,
+          strokeWeight: 4,
+          fillOpacity: 0.0,
+          geodesic: true,
+          map: this.map_,
+          draggable: false,
+          zIndex: 2,
+          paths: country.end.map(google.maps.geometry.encoding.decodePath),
+        };
+
+        var poly = new google.maps.Polygon(options);
+        this.polys_.push(poly);
+        var vertices = poly.getPaths();
+        var country = vertices.getAt(0).getAt(1);
+
+        for(i = 0; i < vertices.length; i++){
+          for(j = 0; j < vertices.getAt(i).length; j ++){
+            array_lat.push(vertices.getAt(i).getAt(j).lat());
+            array_long.push(vertices.getAt(i).getAt(j).lng());
+          }
+        }
+      };
+
+
+      function Max(array){
+        if(array.length == 0){
+          return null;
+        }
+
+        var max = array[0];
+
+        for(i = 0; i < array.length; i++) {
+            if(array[i] > max) {
+              max = array[i];
+            }
+        }
+        return max;
+      }
+
+      function Min(array){
+        if(array.length == 0){
+          return null;
+        }
+
+        var min = array[0];
+
+        for(i = 0; i < array.length; i++) {
+            if(array[i] < min) {
+              min = array[i];
+            }
+        }
+        return min;
+      }
+
+
+
+
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1ZqVc7wfdnrjuOzAEAsD7MWgpaAyaTZc&callback=initMap&libraries=places,geometry">
+    </script>
+  </body>
+</html>
+
+
+
+//
+// function setMarkers1() { // function for original markers
+//   // Adds markers to the map.
+//
+//   var capital_image = { // for the capital city
+//     url: 'http://eneslow.com/media/wysiwyg/star-icon.png',
+//     // This marker is 20 pixels wide by 32 pixels high.
+//     size: new google.maps.Size(50, 50),
+//     // The anchor for this image is the center of the star.
+//     anchor: new google.maps.Point(25, 25)
+//   };
+//
+//   var capital_marker = new google.maps.Marker({
+//     // marker for the capital city
+//     position: {lat: 64.1265, lng: -21.8174},
+//     map: map,
+//     icon: capital_image,
+//     title: "Reykjavik"
+//   });
+//
+//   var capital_infowindow = new google.maps.InfoWindow({
+//     // infowindo for the capital city marker
+//     content: '<h1 id="firstHeading" class="firstHeading">Reykjavik</h1>' + '<div id="bodyContent">'+
+//     '<p><b>Reykjavik</b>, is the capital city of Iceland. </p>'
+//   });
+//
+//   capital_marker.addListener('click', function() {
+//     // attaches the InfoWindow to the capital city marker
+//     capital_infowindow.open(map, capital_marker);
+//   });
+//
+//
+//   for (var i = 0; i < pointsOfInterest.length; i++) {
+//     // forloop that creates the markers for the original locations
+//     var place = pointsOfInterest[i];
+//     var latlng = new google.maps.LatLng(place[1], place[2]);
+//     var marker1 = new google.maps.Marker({
+//       position: latlng,
+//       map: map,
+//       title: place[0],
+//       zIndex: place[3]
+//
+//     });
+//
+//     addMarkerListener(marker1, place);
+//     // calls the function that adds the listeners for each
+//   }
+// }
+//
+// function addMarkerListener(m, loc) { // passing in some marker m , functions force the variables out of scope
+//   google.maps.event.addListener(m, 'click', function() { // defining this function now to be used on click
+//     infowindow1.close();
+//     infowindow1.setContent(loc[4]);
+//     infowindow1.open(map, m); // passing the reference of the marker again
+//
+//   });
+//
+// }
